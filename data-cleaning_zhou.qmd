@@ -247,7 +247,8 @@ Import the species csv files with the bird species information:
 ```{r}
 species_csv <- read_csv(file.path(datadir_raw, species_file))
 
-glimpse(species_csv)
+#glimpse(species_csv)
+view(species_csv)
 ```
 
 This data set is stored in a wide format where each species has its own column. This means that every time we discover a new species we will have to add a column. In addition, a bunch of `0` are stored in this table but do not really provide any information. According to the metadata:
@@ -255,14 +256,20 @@ This data set is stored in a wide format where each species has its own column. 
 ```
 The number of individuals seen is recorded for each species, except when individuals were not counted but the species was present (typically for very abundant species), an "X" is shown. The remaining columns list the full-name of species (birds and mammals) recorded for at least study site in at least one year.
 ```
-
+**Note**: Because we dont feel comfortable enough with how to interperate X, we will convert it to a precence/Absence 
 This data model is not convenient for a database, we will have to switch to a long format.
 
 
 ### Data cleaning
 
 ```{r}
-species_long <- 
+species_long <- species_csv %>% 
+  pivot_longer(
+    cols = !c(Year, Site, Date, Jdate, Num_observers, All_obs_reported, Observer_hours),
+    names_to = "species",
+    values_to = "species_count",
+    values_transform = list(species_count = as.character) # convert to character to avoid losses due to conversion to numeric
+  )
 ```
 
 
@@ -270,14 +277,19 @@ We want to focus on the presence and absence of species and not the count. Let's
 
 ```{r}
 species_presence <- species_long %>%
-  
+  mutate(species_presence = ifelse(species_count == "0", 0, 1))
 ```
 
 We can remove some columns: "Num_observers", "All_obs_reported", "Observer_hours" are here to help to compute the effort of observation but since we just want presence and absence, we do not need it. We can also remove all the zeros values to reduce the size of our data set:
 
 ```{r}
 species_presence <- species_presence %>%
-  
+  select(-c(Num_observers, All_obs_reported, Observer_hours)) %>%
+  filter(species_count != "0") %>%
+  select(-species_count) %>%
+  mutate(species_presence = as.numeric(species_presence)) %>%
+  arrange(Date)
+
 
 ```
 
