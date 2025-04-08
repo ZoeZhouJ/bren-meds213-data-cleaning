@@ -47,10 +47,15 @@ snowsurvey_csv %>%
   count(Snow_cover)
 ```
 
+Note: There's . and - in snow_cover
+
 Let's focus on the non-numeric values as a starting point:
 
 ```{r}
 snowsurvey_csv %>%
+  count(Snow_cover) %>%
+  filter(is.na(as.numeric(Snow_cover)))
+
 
 ```
 
@@ -70,14 +75,22 @@ Interestingly, when there is a "dot" for snow cover, it is also the case for all
 
 ```{r}
 snowsurvey_fixed <- 
+  snowsurvey_csv %>% 
+  mutate(Snow_cover = ifelse(Snow_cover == ".", NA, Snow_cover)) 
+
+snowsurvey_fixed %>% 
+  count(Snow_cover)
 ```
 
 #### `-` values
 
-Is he problem is similar with "-"?
+Is the problem is similar with "-"?
 
 ```{r}
-snowsurvey_csv 
+# 
+snowsurvey_csv %>%
+  filter(Snow_cover == "-") %>%
+  View()
 ```
 
 
@@ -85,6 +98,12 @@ let's set it to NA:
 
 ```{r}
 snowsurvey_fixed <- 
+  snowsurvey_csv %>% 
+  mutate(Snow_cover = ifelse(Snow_cover %in% c("-","."), NA, Snow_cover)) 
+
+# Check operation 
+snowsurvey_fixed %>% 
+  count(Snow_cover)
 ```
 
 #### `n/a` values
@@ -93,7 +112,8 @@ snowsurvey_fixed <-
 
 ```{r}
 snowsurvey_csv %>%
-  
+  filter(Snow_cover == "n/a") %>%
+  View()
 ```
 
 
@@ -101,7 +121,11 @@ Same pattern, let's substitute with NA:
 
 ```{r}
 snowsurvey_fixed <- 
- 
+ snowsurvey_fixed %>% 
+  mutate(Snow_cover = ifelse(Snow_cover %in% c("-","n/a","."), NA, Snow_cover))
+
+snowsurvey_fixed %>% 
+  count(Snow_cover)
 ```
 
 #### `unk` values
@@ -110,12 +134,20 @@ What about "unk"? It is probably an abbreviation for unknown:
 
 ```{r}
 snowsurvey_csv %>%
-  
+  filter(Snow_cover =="unk") %>% 
+  view()
 ```
 
 
 ```{r}
 snowsurvey_fixed <- 
+  snowsurvey_csv %>% 
+  mutate(Snow_cover = ifelse(Snow_cover %in% c("-","n/a","unk","."), NA, Snow_cover))
+
+count(snowsurvey_fixed, Snow_cover)
+```
+
+```{r}
 ```
 
 #### `<1` values
@@ -123,7 +155,15 @@ snowsurvey_fixed <-
 Finally What should we replace"<1" with?
 
 ```{r}
+snowsurvey_csv %>%
+  filter(Snow_cover == "<1") %>% 
+  view()
+```
 
+```{r}
+snowsurvey_fixed <- 
+  snowsurvey_fixed %>% 
+  mutate(Snow_cover = ifelse(Snow_cover == "<1", "0", Snow_cover)) 
 ```
 
 ```{r}
@@ -145,6 +185,9 @@ Ok, we can do the transformation:
 
 ```{r}
 snowsurvey_fixed <- 
+  snowsurvey_fixed %>% 
+  mutate(Snow_cover = as.numeric(Snow_cover))
+  
 ```
 
 Yeah we have finally a numeric column 🎉. 
@@ -155,19 +198,24 @@ Yeah we have finally a numeric column 🎉.
 We are dealing with percentages, so we should verify that all the values are between 0 and 100:
 
 ```{r}
- snowsurvey_fixed 
+ snowsurvey_fixed %>% 
+  filter(Snow_cover > 100)
 ```
 
 We have two values above 100, with an interesting 470%! ☃️ We should probably set those values to NAs:
 
 ```{r}
 snowsurvey_fixed <- 
+  snowsurvey_fixed %>% 
+  mutate(Snow_cover = ifelse(Snow_cover > 100, NA, Snow_cover)) #%>% 
+  #view()
 ```
 
 Let's check for negative values:
 
 ```{r}
  snowsurvey_fixed %>%
+  filter(Snow_cover < 0)
   
 ```
 
