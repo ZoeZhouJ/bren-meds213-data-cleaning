@@ -1,0 +1,266 @@
+---
+title: "Data Cleaning"
+author: "Zoe Zhou"
+format: 
+  html:
+    code-fold: true
+    embed-resources: true
+    toc: true
+execute:
+  warning: false
+  message: false
+theme: Flatly
+---
+## Overview
+This document describes the data cleaning process for the Arctic Shorebird Demographics Network dataset (ASDN). The ASDN is a long-term monitoring program that collects data on shorebird populations in the Arctic. The dataset includes information on species, breeding success, and environmental conditions. The goal of this project is to clean and prepare the data for analysis.
+
+### Objectives
+- Clean the Water_cover column to transform it into the correct data type and respect expectations for a percentage
+
+- Clean the Land_cover column to transform it into the correct data type and respect expectations for a percentage
+
+- Use the relationship between the three cover columns (Snow, Water, Land) to infer missing values where possible and recompute the Total_cover column as needed
+## Set up 
+```{r}
+# Libraries
+library(tidyverse)
+
+# file names
+datadir_raw <- file.path("data","raw")
+
+datadir_processed <- file.path("data", "processed/")
+
+species_file <- "ASDN_Daily_species.csv"
+
+snowsurvey_file <- "ASDN_Snow_survey.csv"
+
+snowsurvey_clean_file <- "snow_cover.csv"
+
+```
+
+## Snow survey data
+Reuse cleaned snowsurvey data from the previous exercise
+```{r}
+# Import the species
+snowsurvey_csv <- read_csv(file.path(datadir_processed, snowsurvey_clean_file))
+
+glimpse(snowsurvey_csv)
+```
+Our Water_cover, Land_cover, and Total_cover columns are all character types. Before we convert those columns to numeric, we need to check for any non-numeric values.
+
+## Cleaning the Water_cover column
+
+#### Step 1: Check for non-numeric values
+```{r}
+# Check for unique values in Water_cover
+snowsurvey_csv %>%
+  count(Water_cover) %>% 
+  filter(is.na(as.numeric(Water_cover)))
+```
+In the water_cover column, we have some non-numeric values such as `unk`, `n/a`,`-`, and `.` in addition to `NA` values. 
+```{r output="ignore"}
+# Exam the non-numeric "." values in Water_cover 
+snowsurvey_csv %>%
+  filter(Water_cover == ".") #%>%
+  #View()
+```
+
+#### Step 2: Decide on how to assign the non-numeric values
+
+when the Water_cover column contains a ".", either the other cover columns also contain ".", or their values sum to 100 for Total_cover. This indicates that in some cases, Water_cover should be set to zero, while in others, it should be replaced with NA. In the next step, we will filter water_cover column that contains `.` and also has `100` in the Total_cover column and set the water column value to zero. After that, we can set all `.` values to NA. 
+
+```{r output="ignore"}
+# Set Water_cover to 0 when Total_cover is 100 and Water_cover is "."
+snowsurvey_clean <- snowsurvey_csv %>%
+  mutate(Water_cover = ifelse(Total_cover == 100 & Water_cover == ".", 0, Water_cover)) %>% 
+  # Set to NA otherwise
+  mutate(Water_cover = ifelse(Water_cover == ".", NA, Water_cover))
+
+# Check the output
+snowsurvey_clean %>% 
+  count(Water_cover == ".")
+
+```
+For rows with "n/a" values in the water_cover column, some of them have numeric for snow_cover. But there's no way for us to know how to distribute the the rest of the total_cover between water_cover and land_cover. So we can set them to NA. 
+
+For the other non-numeric values such as "-", we can't make any inferences to the value because there's no additional hint/notes from the table and all other cover columns are NA. So we can also set them to NA. 
+
+"unk" is presumably a brief for unknown. We can set it to NA as well. 
+
+```{r}
+# Exam the "-" values in Water_cover 
+snowsurvey_clean %>%
+  filter(Water_cover == "-") #%>%
+#  View()
+
+# Set non numeric values to NA
+snowsurvey_clean <- snowsurvey_clean %>% 
+  mutate(Water_cover = ifelse(Water_cover %in% c("-", "unk", "n/a"), NA, Water_cover))
+
+# Check the output
+snowsurvey_clean %>% 
+  count(Water_cover) %>% 
+  filter(is.na(as.numeric(Water_cover)))
+```
+
+
+#### Step 3: Convert to numeric 
+
+```{r}
+# Convert Water_cover to numeric
+snowsurvey_clean <- snowsurvey_clean %>% 
+  mutate(Water_cover = as.numeric(Water_cover))
+
+#glimpse(snowsurvey_clean)
+```
+#### Step 4: Check for unusual numbers
+Check to see if there's any number outside the range of 0-100
+
+```{r}
+snowsurvey_clean %>% 
+  filter(Water_cover < 0 | Water_cover > 100)
+```
+There is one value that is bigger than 100. It is likely a data entry error, there is no way for us to know what the correct value is. We can set it to NA. 
+```{r}
+snowsurvey_clean <- snowsurvey_clean %>% 
+  mutate(Water_cover = ifelse(Water_cover > 100, NA, Water_cover))
+```
+
+## Cleaning the Land_cover column
+
+#### Step 1: Check for non-numeric values
+```{r}
+# Check for unique values in Land_cover that's not numeric
+snowsurvey_clean %>% 
+  count(Land_cover) %>% 
+  filter(is.na(as.numeric(Land_cover)))
+```
+
+#### Step 2: Decide on how to assign the non-numeric values
+When Land_cover column has value of '.', most of the time, the other cover columns are also '.'. But in some cases, the other cover columns values sum to 100 for Total_cover. We decided to set the Land_cover column to 0 when Total_cover is 100 and Land_cover is ".". After that, we can set all `.` values to NA. Other nonnumeric values are treated the same as the Water_cover column. 
+
+```{r output="ignore"}
+# Look up the "." values in Land_cover
+snowsurvey_clean %>% 
+  filter(Land_cover ==".") 
+
+# Set land_cover to 0 or Na when conditions are met 
+snowsurvey_clean <- snowsurvey_clean %>% 
+  mutate(Land_cover = ifelse(Total_cover == "100" & Land_cover == ".", 0, Land_cover)) %>% 
+  mutate(Land_cover = ifelse(Land_cover %in% c(".","n/a","unk","-"), NA, Land_cover))
+
+# Check for unique values in Land_cover
+snowsurvey_clean %>% 
+  count(Land_cover) %>% 
+  filter(is.na(as.numeric(Land_cover))) 
+```
+
+#### Step 3: Convert to numeric 
+```{r}
+# Convert Land_cover to numeric 
+snowsurvey_clean <- snowsurvey_clean %>%
+  mutate(Land_cover = as.numeric(Land_cover))
+```
+
+#### Step 4: Check for unusual numbers
+
+```{r}
+# Look up values outside of range 0-100
+snowsurvey_clean %>% 
+  filter(Land_cover < 0 | Land_cover > 100)
+
+```
+There are two rows where Land_cover is less than 0. In both cases, it seems like data entry staff have been using Land_cover column to correct for Total_cover of 100, when other column has been exceeding 100. Because we don't have the knowledge to correct for those numbers, we have to set them to NA. 
+
+```{r} 
+# Set Land_cover to NA when it's greater than 100
+snowsurvey_clean <- snowsurvey_clean %>% 
+  mutate(Land_cover = ifelse(Land_cover > 100, NA, Land_cover)) %>% 
+  mutate(Land_cover = ifelse(Land_cover < 0, NA, Land_cover))
+```
+
+## Recompute Total_cover 
+Use the relationship between the three cover columns (Snow, Water, Land) to infer missing values where possible and recompute the Total_cover column as needed:
+
+According to the metadata, the Total_cover column is the sum of the three cover columns, it should fit the following conditions:
+- Total_cover should always equal 100.
+- If all three cover columns are NA, Total_cover should be NA
+- If one of the three cover columns is NA, Total_cover should be the sum of the other two cover columns and equal 100
+- If two of the three cover columns are NA, Total_cover should be the value of the non-NA column and equal 100
+
+```{r}
+# Check for unique values in Total_cover
+snowsurvey_clean %>% 
+  count(Total_cover) %>% 
+  filter(is.na(as.numeric(Total_cover))) 
+```
+
+Decide if there's any inference we can make from the other columns for "-", ".", "n/a" values in Total_cover column:
+All other columns are NA, we can't make any inferences.
+```{r}
+# Look into those values
+snowsurvey_clean %>% 
+  filter(Total_cover %in% c("-", ".", "n/a", "<row r=\\64\\ spans=\\1:11\\ x14ac:dyDescent=\\0.2\\>")) 
+
+# Assign to NA
+snowsurvey_clean <- snowsurvey_clean %>% 
+  mutate(Total_cover = ifelse(Total_cover %in% c("-", ".", "n/a", "<row r=\\64\\ spans=\\1:11\\ x14ac:dyDescent=\\0.2\\>"), NA, Total_cover))
+
+# Transform Total_cover to numeric
+snowsurvey_clean <- snowsurvey_clean %>% 
+  mutate(Total_cover = as.numeric(Total_cover))
+```
+
+We first want to confirm that Total_cover is the sum of three cover columns. 
+```{r}
+# Add a new column for sum of three cover columns
+snowsurvey_clean %>% 
+  mutate(Sum_cover = Snow_cover + Water_cover + Land_cover) %>% 
+  filter(Total_cover != Sum_cover) #%>% 
+  #view()
+```
+
+- For rows where Total_cover is not 100, but sum of three columns is 100, we should set values to 100 in order to match the metadata description. 
+
+- For rows where Total_cover is equal to Sum_cover but the value is not 100, we can set to NA because it doesn't correspond to our metadata: "Total_cover	Total sum (to check the above percents; should always sum to 100)"
+
+- There are a lot of instances when Total_cover is 100 but the sum of the three cover columns is not 100. This is likely due to data entry errors. We can set those values to NA. 
+
+
+```{r}
+snowsurvey_clean <- snowsurvey_clean %>% 
+  mutate(Sum_cover = rowSums(cbind(Snow_cover, Water_cover, Land_cover), na.rm = TRUE)) %>%
+  mutate(Total_cover = Sum_cover) %>% 
+  mutate(Total_cover = ifelse(Total_cover != 100, NA, Total_cover)) %>% 
+  select(-Sum_cover)
+
+# Check for final output
+snowsurvey_clean %>% 
+  count(Total_cover) 
+
+
+```
+
+Let's write the survey table to a csv file:
+
+```{r}
+# check if the folder exists
+dir.create(datadir_processed, showWarnings = FALSE)
+
+# write the file
+write_csv(snowsurvey_clean, file.path(datadir_processed, "all_cover_fixed_ZHOU.csv"))
+```
+
+```{r}
+# Check the output
+res <- read_csv(file.path(datadir_processed, "all_cover_fixed_ZHOU.csv"))
+
+```
+
+
+
+
+
+
+
+
