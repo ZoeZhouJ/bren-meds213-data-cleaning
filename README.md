@@ -86,7 +86,7 @@ For the file data/processed/all_cover_fixed_ZHOU.csv:
 #### 3. Variable List: \<list variable name(s), description(s), unit(s)and value labels as appropriate for each\>
 
 | Column Name | Definition                                            | Units      |
-|-------------|-------------------------------------------------------|------------|
+|--------------|--------------------------------------------|--------------|
 | Site        | Four-letter code of site at which data were collected | N/A        |
 | Year        | Year in which data were collected                     | YYYY       |
 | Date        | Date on which data were collected                     | DD-MM-YYYY |
@@ -101,13 +101,13 @@ For the file data/processed/all_cover_fixed_ZHOU.csv:
 
 #### 4. Missing data codes: <list code/symbol and definition>
 
-NA : Missing data. This data is missing either because of syntax errors during the data entry/recording process that were not interpretable, or because the missing data for a specific cover type could not be mathematically calculated given the corresponding values for the other cover types.
-
-Specifically, all non-numeric values for Snow cover, Land cover, and Water cover were replaced with NA. Additionally, any cover values that were far outside the range of 0-100 were removed. Some leeway was added (up to 120) for the total cover to account for possible calculation errors; this was to ensure we saved as much data as possible. Values for total cover were recalculated as the sum of the other three cover variables. In places where only two cover types were available, the missing cover type was filled by assuming the total cover was 100 and subtracting the difference of the two present cover types.
+`NA` Missing data. This value indicates that the original entry was either non-numeric (e.g., ".", "n/a", "-", "unk"), outside the valid range (e.g., negative values or values over 100), or could not be inferred from the other cover types. When possible, "." values were interpreted as 0 if the total cover was correctly calculated to 100 with other columns. The data set does not infer missing cover values from the other two. It only recalculates Total_cover from existing values.The Total_cover column was recalculated as the sum of the three cover types and set to NA if the sum did not equal 100. This ensures all values are numeric, valid, and consistent with metadata expectations.
 
 #### 5. Specialized formats or other abbreviations used:
 
-`Site` is abbreviated with a four-letter code that represents the sampling site. More detailed information about the site's name and description can be found in the data file `site.csv` [here](https://github.com/UCSB-Library-Research-Data-Services/bren-meds213-data-cleaning/tree/main/data/raw).
+`Plot` and `Location` are alphanumeric identifiers for the study plot and snow-survey location, respectively. 
+`Site` is abbreviated with a four-letter code that represents the sampling site.
+`Observer` is the code of the person's name who conducted the survey.
 
 ## SHARING/ACCESS INFORMATION
 
