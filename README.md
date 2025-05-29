@@ -8,7 +8,6 @@ The goal of this repository is to provide a well-documented, and cleaned version
 
 ### 1. File List:
 
-```         
 -   `eds213_data_cleaning_assign_ZHOU.qmd` and associated files and html for easier viewing: Contains the code used to clean data and generate the final cleaned data set.
 -   `data-cleaning_empty.qmd`: A template for in-class data cleaning.
 -   `data-cleaning_zhou.qmd`: Code for cleaning the shorebird survey data and snow cover column in snow survey table.
@@ -17,7 +16,7 @@ The goal of this repository is to provide a well-documented, and cleaned version
 -   `data/raw/ASDN_Snow_survey.csv`: Data set containing original snow survey data.
 -   `data/processed/all_cover_fixed_ZHOU.csv`: The final cleaned data set with cover values for shorebird surveys. -`data/processed/snow_cover.csv`: The final cleaned snow survey data set. -`data/processed/species_precense.csv`: The shorebird species presence data set.
 -   `renv/`: R package management directory for reproducibility.
-```
+
 
 ### 2. Relationship Between Files
 
